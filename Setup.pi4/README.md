@@ -1,26 +1,15 @@
-# How I set up a Raspberry Pi for use on the ships of the ARCTERX pilot cruise in 2022
+# How I set up a Raspberry Pi for use on the ships of the ARCTERX pilot cruise in 2025
 ---
-1. Create MicroSD card with Ubuntu server for a Raspberry Pi system. 
-  - I'm using 128GB or 256GB cards.
-  - I installed Ubuntu 21.10 64 bit server. 
-  - To burn the MicroSD card I used the "Raspberry Pi Imager" application on my MacOS desktop.
-2. Install the MicroSD in the Pi
+1. Create NVME/MicroSD card with Ubuntu server for a Raspberry Pi system. 
+  - I'm using 1TB M.2. In the past I've used 128GB and 256GB microSD cards.
+  - I installed Ubuntu 24.10 64 bit server. 
+  - To burn the NVMe/MicroSD card I used the `Raspberry Pi Imager` application on my MacOS desktop. I customize the username, password, hostname, timezone, and services using the `Imager`
+2. Install the NVMe/MicroSD in the Pi
 3. Boot the Pi and get the IP address.
-4. Log into the Pi `ssh ubuntu@ipAddr` where ipAddr is the IP address you foudn in the previous step.
-5. The initial password is *ubuntu* which you'll have to change on the first login.
-6. Log back into the Pi using the new password, `ssh ubuntu@ipAddr`
-7. Set the hostname using the command `sudo hostnamectl set-hostname YourNewHostname`
-8. Enable zeroconf/bonjour via AVAHI-DAEMON, `sudo apt install avahi-daemon --yes`
-9. Add the primary user via the commands
-  - `sudo adduser pat`
-  - `sudo usermod -aG sudo pat`
-10. Logout
-11. Copy your *SSH* keys to the Pi using `ssh-copy-id pat@YourNewHostname.local` where YourNewHostname is what you set above.
-12. Log into the new user via `ssh pat@YourNewHostname.local` where pat is the username you used above.
-13. Check that the new user has *sudo* privledges `sudo ls -la`
-14. Delete the ubuntu user, `sudo deluser --remove-home ubuntu`
-15. Clone the git repository `git clone --recurse-submodules git@github.com:mousebrains/ARCTERX.git`
-16. `cd ARCTERX/Setup.pi4`
+4. `ssh-copy-id username@IPaddr` to install your public key on the new Pi.
+5. `ssh username@IPaddr`
+8. Clone the git repository `git clone --recurse-submodules git@github.com:mousebrains/ARCTERX2025.git`
+10. `cd ARCTERX2025/Setup.pi4`
 17. `install0.py --verbose` This will do the following:
   - `sudo apt update`
   - `sudo apt upgrade`
@@ -44,11 +33,13 @@
   - `sudo apt install python3-pandas`
   - `sudo apt install python3-xarray`
   - `sudo apt install python3-geopandas`
+  - `sudo apt install python3-venv`
+  - `python3 -m venv --system-site-packages ~/.venv`
   - `python3 -m pip install --user inotify-simple`
   - `python3 -m pip install --user libais`
   - Update ~/.ssh/config for arcterx
-  - Create ~/.ssh/id_rsa, if needed
-  - Add new id_rsa key to arcterx authorized_keys
+  - Create ~/.ssh/arcterx, if needed
+  - Add new arcterx key to arcterx authorized_keys
   - Set up reverse ssh tunnel
   - Set up syncthing
   - Set up samba mount point
