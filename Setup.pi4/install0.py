@@ -35,33 +35,35 @@ def setupSSH(args:ArgumentParser) -> None:
         logging.info("Creating %s", sshDir)
         os.makedirs(sshDir, mode=0o700, exist_ok=True)
 
-    fn = os.path.join(sshDir, "id_rsa")
-    if not os.path.isfile(fn) or not os.path.isfile(fn + ".pub"):
-        execCmd((args.sshkeygen, "-t", "rsa", "-b", "2048", "-f", fn, "-N", ""))
+    fnKey = os.path.join(sshDir, "arcterx")
+    if not os.path.isfile(fnKey) or not os.path.isfile(fnKey + ".pub"):
+        execCmd((args.sshkeygen, "-t", "ed25519", "-f", fnKey, "-N", ""))
     
-    fn = os.path.join(sshDir, "config")
+    fnConfig = os.path.join(sshDir, "config")
     content = [
             "Host arcterx arcterx.ceoas.oregonstate.edu",
             "  Hostname arcterx.ceoas.oregonstate.edu",
             "  User pat",
-            "  IdentityFile ~/.ssh/id_rsa",
+            "  IdentityFile ~/.ssh/arcterx",
             "  Compression yes",
+            "  ServerAliveInterval 120",
+            "  ServerAliveCountMax 10",
             ]
-    if os.path.isfile(fn):
-        logging.info("Reading existing %s", fn)
+    if os.path.isfile(fnConfig):
+        logging.info("Reading existing %s", fnConfig)
         qIgnore = False
-        with open(fn, "r") as fp:
+        with open(fnConfig, "r") as fp:
             for line in fp.readlines():
                 if re.match(r"\s*Host\s+", line):
                     qIgnore = re.match(r"\s*Host\s+arcterx\s*", line) is not None
                 if qIgnore: continue
                 content.append(line.rstrip())
-    logging.info("Updating %s", fn)
-    with open(fn, "w") as fp:
+    logging.info("Updating %s", fnConfig)
+    with open(fnConfig, "w") as fp:
         fp.write("\n".join(content))
         fp.write("\n")
 
-    execCmd((args.sshcopyid, "arcterx"))
+    execCmd((args.sshcopyid, "-i", fnKey, "arcterx"))
 
 parser = ArgumentParser()
 grp = parser.add_argument_group(description="installation options")
@@ -119,24 +121,58 @@ for key, value in {"user.name": args.gitUser, "user.email": args.gitemail,
     execCmd((args.git, "config", "--global", key, value))
 
 # Install system packages I want
-for pkg in ("fail2ban", "nginx", "php-fpm", "samba*", "php-xml", "php-yaml",
-        "python3-pip", "python3-pandas", "python3-xarray", "python3-geopandas"):
-    execCmd((args.sudo, args.apt, "--yes", "install", pkg))
+execCmd((
+    args.sudo,
+    args.apt,
+    "--yes",
+    "install",
+    "fail2ban", 
+    "nginx", 
+    "php-fpm", 
+    "samba*",
+    "php-xml",
+    "php-yaml",
+    "python3-pip",
+    "python3-pandas",
+    "python3-xarray",
+    "python3-geopandas",
+    "python3-venv",
+    ))
+
+execCmd(("python3", 
+         "-m", "venv", 
+         "--system-site-packages",
+         os.path.abspath(os.path.expanduser("~/.venv"))),
+        )
 
 # Install python packages
 for pkg in ("inotify-simple", "libais"):
-    execCmd((args.python, "-m", "pip", "install", "--user", pkg))
+    execCmd((
+        os.path.abspath(os.path.expanduser(os.path.join("~/.venv/bin/python3"))),
+        "-m", "pip",
+        "install",
+        pkg,
+        ))
+
+logsDir = os.path.abspath(os.path.expanduser("~/logs"))
+if not os.path.isdir(logsDir):
+    logging.info("Creating %s", logsDir)
+    os.makedirs(logsDir, exist_ok=True, mode=0o755)
 
 if args.shore:
-    execCmd(("./install.py", "--folderRoot", args.folderRoot, "--shore",),
-        cwd=os.path.abspath(os.path.expanduser("~/ARCTERX/syncthing")))
+    print("Not installing syncthing")
+    # execCmd(("./install.py", "--folderRoot", args.folderRoot, "--shore",),
+            # cwd=os.path.abspath(os.path.join(os.path.dirname(__file__), "../syncthing")),
+            # )
 else: # Shipside
     setupSSH(args) # Setup ssh for connecting to arcterx
     # Set up reverse ssh tunnel so shoreside can log into this machine
-    execCmd(("./install.py",), cwd=os.path.abspath(os.path.expanduser("~/ARCTERX/SSHTunnel")))
-    execCmd(("./install.py", "--folderRoot", args.folderRoot, "--ship",
-        "--kbpsSend", str(args.kbpsSend), "--kbpsRecv", str(args.kbpsRecv), "--peer", args.peer),
-        cwd=os.path.abspath(os.path.expanduser("~/ARCTERX/syncthing")))
+    execCmd(("./install.py",), 
+            cwd=os.path.abspath(os.path.join(os.path.dirname(__file__), "../SSHTunnel")),
+            )
+    # execCmd(("./install.py", "--folderRoot", args.folderRoot, "--ship",
+        # "--kbpsSend", str(args.kbpsSend), "--kbpsRecv", str(args.kbpsRecv), "--peer", args.peer),
+        # cwd=os.path.abspath(os.path.join(os.path.dirname(__file__), "./syncthing")))
 
 if not args.noreboot:
     execCmd((args.sudo, "reboot"))

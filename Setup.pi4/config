@@ -1,6 +1,0 @@
-Host arcterx arcterx.ceoas.oregonstate.edu
-  HostName arcterx.ceoas.oregonstate.edu
-  User pat
-  IdentityFile ~/.ssh/arcterx
-  Compression yes
-  ServerAliveInterval 120
