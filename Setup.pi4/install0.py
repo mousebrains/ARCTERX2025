@@ -92,6 +92,7 @@ grp = parser.add_argument_group(description="Commands")
 grp.add_argument("--sudo", type=str, default="/usr/bin/sudo", help="Full path to sudo")
 grp.add_argument("--apt", type=str, default="/usr/bin/apt-get", help="Full path to apt-get")
 grp.add_argument("--cp", type=str, default="/usr/bin/cp", help="Full path to cp")
+grp.add_argument("--touch", type=str, default="/usr/bin/touch", help="Full path to touch")
 grp.add_argument("--python", type=str, default="/usr/bin/python3", help="Full path to python3")
 grp.add_argument("--git", type=str, default="/usr/bin/git", help="Full path to git")
 grp.add_argument("--sshkeygen", type=str, default="/usr/bin/ssh-keygen",
@@ -111,6 +112,7 @@ if not args.noUpgrade: # System level update, upgrade, and remove old packages
     execCmd((args.sudo, args.apt, "--yes", "autoremove"))
 
 shutoffAutoupdates(args) # Turn off auto updates
+execCmd((args.sudo, args.touch, "/etc/cloud/cloud-init.disabled"))
 
 # Set up git global variables
 for key, value in {"user.name": args.gitUser, "user.email": args.gitemail,
