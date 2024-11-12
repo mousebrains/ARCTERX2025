@@ -14,7 +14,8 @@ Group=pat
 workingDirectory=/home/pat/logs
 ExecStart=/home/pat/ARCTERX2025/SFMC2DB/sfmc2db.py \
 	--verbose \
-	--logfile=/home/pat/logs/SFMC2DB.log
+	--logfile=/home/pat/logs/SFMC2DB.log \
+	~/Sync/Shore/SFMC
 
 Restart=always
 RestartSec=30
