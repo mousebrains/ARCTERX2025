@@ -21,7 +21,7 @@ def rsync(sources:list, args:ArgumentParser) -> bool:
            ]
     cmd.extend(sources)
     cmd.append(args.target)
-    logging.info("cmd %s", cmd)
+
     sp = subprocess.run(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,)
     try:
         sp.stdout = str(sp.stdout, "utf-8")
@@ -71,7 +71,9 @@ try:
         dt = max(0.1, t0 - time.time() + args.delay)
         logging.info("%s updated, sleeping for %s", fn, dt)
         time.sleep(dt)
-        sources = set(fn if os.path.isdir(fn) else os.path.dirname(fn))
+        sources = set()
+        sources.add(fn if os.path.isdir(fn) else os.path.dirname(fn))
+
         while not q.empty():
             (t0, fn) = q.get()
             sources.add(fn if os.path.isdir(fn) else os.path.dirname(fn))

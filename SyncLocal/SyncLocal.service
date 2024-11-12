@@ -1,0 +1,24 @@
+#
+# Sync from local directories into ~/Sync/Shore
+#
+# Nov-2024, Pat Welch, pat@mousebrains.com
+
+[Unit]
+Description=Sync local to ~/Sync/Shore
+
+[Service]
+# type=simple
+User=pat
+Group=pat
+
+workingDirectory=/home/pat/logs
+ExecStart=/home/pat/ARCTERX2025/SyncLocal/syncit.py \
+	--config=/home/pat/ARCTERX2025/SyncLocal/config.yaml \
+	--verbose \
+	--logfile=/home/pat/logs/SyncLocal.log
+
+Restart=always
+RestartSec=300
+
+[Install]
+WantedBy=multi-user.target
