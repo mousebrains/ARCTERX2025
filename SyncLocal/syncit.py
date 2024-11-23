@@ -36,6 +36,11 @@ def rsync(sources:list, args:ArgumentParser) -> bool:
 
     return sp.returncode == 0
 
+def mkRootPath(fn:str, config:list) -> str:
+    rootPaths = list(filter(lambda x: fn.startswith(x), config))
+    if rootPaths: return rootPaths[0]
+    return fn if os.path.isdir(fn) else os.path.dirname(fn)
+
 parser = ArgumentParser()
 Logger.addArgs(parser)
 parser.add_argument("--target", type=str, default="~/Sync/Shore", help="Where to rsync into")
@@ -72,11 +77,12 @@ try:
         logging.info("%s updated, sleeping for %s", fn, dt)
         time.sleep(dt)
         sources = set()
-        sources.add(fn if os.path.isdir(fn) else os.path.dirname(fn))
+        sources.add(mkRootPath(fn, config))
 
         while not q.empty():
             (t0, fn) = q.get()
-            sources.add(fn if os.path.isdir(fn) else os.path.dirname(fn))
+            sources.add(mkRootPath(fn, config))
+            logging.info("Adding extra %s", fn)
 
         rsync(sources, args)
 
