@@ -2,10 +2,13 @@
 #
 # Monitor SFMC files and add them to the PostgreSQL database
 #
+# Optionally update a CSV file to be transfer to/from ship
+#
 # Nov-2024, Pat Welch, pat@mousebrains.com
 
 from argparse import ArgumentParser
 import psycopg
+import MakeTables as mt
 from TPWUtils.INotify import INotify
 from TPWUtils import Logger
 import logging
@@ -14,20 +17,7 @@ import glob
 import time
 import pandas as pd
 import numpy as np
-
-def mkTable(dbArg:str, tbl:str) -> None:
-    sql0 = "CREATE TABLE IF NOT EXISTS " + tbl + "("
-    sql0+= "  time TIMESTAMP WITH TIME ZONE NOT NULL,"
-    sql0+= "  name TEXT NOT NULL,"
-    sql0+= "  type TEXT NOT NULL,"
-    sql0+= "  latitude NUMERIC, CHECK(latitude >= -90 AND latitude <= 90),"
-    sql0+= "  longitude NUMERIC, CHECK(longitude >= -180 AND longitude <= 180),"
-    sql0+= "  PRIMARY KEY(time, name)"
-    sql0+= ")"
-
-    with psycopg.connect(dbArg) as conn:
-        with conn.cursor() as cur:
-            cur.execute(sql0)
+import MakeTables as mt
 
 def file2DB(fn:str, conn, table:str) -> None:
     (name, ext) = os.path.splitext(os.path.basename(fn))
@@ -63,29 +53,35 @@ grp = parser.add_argument_group(description="DB related options")
 grp.add_argument("--user", type=str, default="pat", help="username to connect as")
 grp.add_argument("--DB", type=str, default="arcterx", help="database name to work in")
 grp.add_argument("--table", type=str, default="SFMC", help="Table to store data into")
+grp = parser.add_argument_group(description="CSV reader related options")
+grp.add_argument("--noappend", action="store_true",
+                 help="Is the CSV input not file strictly growing?")
 args = parser.parse_args()
 
 Logger.mkLogger(args)
 
 dbArg = f"dbname={args.DB} user={args.user}"
-mkTable(dbArg, args.table)
+mt.mkAll(args.DB, args.user)
 
 i = INotify(args)
 i.start()
 
 
-with psycopg.connect(dbArg) as conn:
-    with conn.cursor() as cur:
-      for name in args.dirs:
-          name = os.path.abspath(os.path.expanduser(name))
-          i.addTree(name)
-          for fn in glob.glob(os.path.join(name, "*.csv")):
-              file2DB(fn, conn, args.table)
+with psycopg.connect(dbArg) as conn, conn.cursor() as cur:
+    mt.beginTransaction(cur)
+    for name in args.dirs:
+        name = os.path.abspath(os.path.expanduser(name))
+        i.addTree(name)
+        for fn in glob.glob(os.path.join(name, "*.csv")):
+            file2DB(fn, cur, args.table)
+    conn.commmit()
 
 q = i.queue
 while True:
     (t0, fn) = q.get()
     logging.info("t0 %s fn %s", t0, fn)
-    with psycopg.connect(dbArg) as conn:
-        file2DB(fn, conn, args.table)
+    with psycopg.connect(dbArg) as conn, cur=conn.cursor():
+        mt.beginTransaction(cur)
+        file2DB(fn, cur, args.table)
+        conn.commit()
     q.task_done()
