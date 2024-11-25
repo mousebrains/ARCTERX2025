@@ -74,7 +74,7 @@ with psycopg.connect(dbArg) as conn, conn.cursor() as cur:
         i.addTree(name)
         for fn in glob.glob(os.path.join(name, "*.csv")):
             file2DB(fn, cur, args.table)
-    conn.commmit()
+    conn.commit()
 
 q = i.queue
 while True:
