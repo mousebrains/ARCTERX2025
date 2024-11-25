@@ -73,6 +73,11 @@ grp.add_argument("--gitEditor", type=str, default="vim", help="Git editor")
 grp = parser.add_argument_group(description="Logging options")
 grp.add_argument("--verbose", action="store_true", help="Enable INFO messages")
 grp.add_argument("--debug", action="store_true", help="Enable INFO+DEBUG messages")
+grp.add_argument("--logDirectory", type=str, default="~/logs",
+                 help="Where logfiles are stored")
+grp.add_argument("--venv", type=str, default="~/.venv",
+                 help="Path to my python virtual environment.")
+
 grp = parser.add_mutually_exclusive_group()
 grp.add_argument("--shore", action="store_true", help="This is a shore side installation")
 grp.add_argument("--ship", action="store_true", help="This is a ship side installation")
@@ -100,6 +105,10 @@ grp.add_argument("--sshkeygen", type=str, default="/usr/bin/ssh-keygen",
 grp.add_argument("--sshcopyid", type=str, default="/usr/bin/ssh-copy-id",
     help="Full path to ssh-copy-id")
 args = parser.parse_args()
+
+args.folderRoot = os.path.abspat(os.path.expanduser(args.folderRoot))
+args.logDirectory = os.path.abspat(os.path.expanduser(args.logDirectory))
+args.venv = os.path.abspat(os.path.expanduser(args.venv))
 
 if args.verbose:
     logging.basicConfig(level=logging.INFO)
@@ -144,25 +153,29 @@ execCmd((
 execCmd(("python3", 
          "-m", "venv", 
          "--system-site-packages",
-         os.path.abspath(os.path.expanduser("~/.venv"))),
+         args.venv,
         )
 
 # Install python packages
 for pkg in ("inotify-simple", "libais"):
     execCmd((
-        os.path.abspath(os.path.expanduser(os.path.join("~/.venv/bin/python3"))),
+        os.path.join(args.venv, "bin/python3"),
         "-m", "pip",
         "install",
         pkg,
         ))
 
-logsDir = os.path.abspath(os.path.expanduser("~/logs"))
-if not os.path.isdir(logsDir):
-    logging.info("Creating %s", logsDir)
-    os.makedirs(logsDir, exist_ok=True, mode=0o755)
+for name in (args.logDirectory,
+             os.path.join(args.folderRoot, "Ship"), 
+             os.path.join(args.folderRoot, "Shore"),
+             ):
+    name = os.path.abspath(os.path.expanduser(name))
+    if not os.path.isdir(name):
+        logging.info("Creating %s", name)
+        os.makedirs(name, exist_ok=True, mode=0o755)
 
 if args.shore:
-    print("Not installing syncthing")
+    logging.info("Nothing to do for shoreside")
     # execCmd(("./install.py", "--folderRoot", args.folderRoot, "--shore",),
             # cwd=os.path.abspath(os.path.join(os.path.dirname(__file__), "../syncthing")),
             # )
