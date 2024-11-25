@@ -80,7 +80,7 @@ q = i.queue
 while True:
     (t0, fn) = q.get()
     logging.info("t0 %s fn %s", t0, fn)
-    with psycopg.connect(dbArg) as conn, cur=conn.cursor():
+    with psycopg.connect(dbArg) as conn, conn.cursor() as cur:
         mt.beginTransaction(cur)
         file2DB(fn, cur, args.table)
         conn.commit()

@@ -35,7 +35,7 @@ def mkPosition(cur:psycopg.Cursor, tbl:str = "position") -> str:
 
     return tbl if cur.statusmessage == "CREATE TABLE" else None
 
-def mkFilePosition(cur:psycopg:Cursor, tbl:str="filepositon") -> str:
+def mkFilePosition(cur:psycopg.Cursor, tbl:str="filepositon") -> str:
     sql =f"CREATE TABLE IF NOT EXISTS {tbl}("
     sql+= "  filename TEXT PRIMARY KEY,"
     sql+= "  position BIGINT NOT NULL,"
@@ -54,7 +54,7 @@ def mkAll(db:str, user:str) -> None:
         with conn.cursor() as cur:
             beginTransaction(cur)
             print("mkPosition", mkPosition(cur))
-            print("mkFilePositon", mkFilePosition(cur)
+            print("mkFilePositon", mkFilePosition(cur))
             conn.commit()
 
 if __name__ == "__main__":
