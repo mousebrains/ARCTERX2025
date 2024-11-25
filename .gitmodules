@@ -1,9 +1,6 @@
 [submodule "SSHTunnel"]
 	path = SSHTunnel
 	url = git@github.com:mousebrains/SSHTunnel.git
-[submodule "SyncPushPull"]
-	path = SyncPushPull
-	url = git@github.com:mousebrains/SyncPushPull.git
 [submodule "TPWUtils"]
 	path = TPWUtils
 	url = git@github.com:mousebrains/TPWUtils.git
