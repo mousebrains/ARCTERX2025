@@ -1,0 +1,23 @@
+#
+# Save SFMC glider positions into PostgreSQL database
+#
+# Nov-2024, Pat Welch, pat@mousebrains.com
+
+[Unit]
+Description=Nautilus to DB
+
+[Service]
+# type=simple
+User=pat
+Group=pat
+
+workingDirectory=/home/pat/logs
+ExecStart=/home/pat/ARCTERX2025/NautilusPos/pos2db.py \
+	--verbose \
+	--logfile=/home/pat/logs/NautilusPosition.log
+
+Restart=always
+RestartSec=600
+
+[Install]
+WantedBy=multi-user.target

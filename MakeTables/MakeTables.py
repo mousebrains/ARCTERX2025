@@ -28,6 +28,8 @@ def mkPosition(cur:psycopg.Cursor, tbl:str = "position") -> str:
     sql+= "  name TEXT NOT NULL,"
     sql+= "  latitude NUMERIC, CHECK(latitude >= -90 AND latitude <= 90),"
     sql+= "  longitude NUMERIC, CHECK(longitude >= -180 AND longitude <= 180),"
+    sql+= "  qCSV boolean DEFAULT False,"
+    sql+= "  qNC boolean DEFAULT False,"
     sql+= "  PRIMARY KEY(time, name)"
     sql+= ");"
 
@@ -35,12 +37,10 @@ def mkPosition(cur:psycopg.Cursor, tbl:str = "position") -> str:
 
     return tbl if cur.statusmessage == "CREATE TABLE" else None
 
-def mkFilePosition(cur:psycopg.Cursor, tbl:str="filepositon") -> str:
+def mkFilePosition(cur:psycopg.Cursor, tbl:str="fileposition") -> str:
     sql =f"CREATE TABLE IF NOT EXISTS {tbl}("
     sql+= "  filename TEXT PRIMARY KEY,"
-    sql+= "  position BIGINT NOT NULL,"
-    sql+= "  csvFilename TEXT,"
-    sql+= "  lastest TIMESTAMP WITH TIME ZONE"
+    sql+= "  position BIGINT NOT NULL"
     sql+= ");"
 
     cur.execute(sql)
@@ -48,13 +48,13 @@ def mkFilePosition(cur:psycopg.Cursor, tbl:str="filepositon") -> str:
     return tbl if cur.statusmessage == "CREATE TABLE" else None
 
 def mkAll(db:str, user:str) -> None:
-    dbArg = f"dbname={args.db} user={args.user}"
+    dbArg = f"dbname={db} user={user}"
 
     with psycopg.connect(dbArg) as conn:
         with conn.cursor() as cur:
             beginTransaction(cur)
-            print("mkPosition", mkPosition(cur))
-            print("mkFilePositon", mkFilePosition(cur))
+            mkPosition(cur)
+            mkFilePosition(cur)
             conn.commit()
 
 if __name__ == "__main__":
