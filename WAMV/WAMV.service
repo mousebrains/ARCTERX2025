@@ -1,0 +1,23 @@
+#
+# Save WAMV positions into PostgreSQL database
+#
+# Nov-2024, Pat Welch, pat@mousebrains.com
+
+[Unit]
+Description=WAM-V to DB
+
+[Service]
+# type=simple
+User=pat
+Group=pat
+
+workingDirectory=/home/pat/logs
+ExecStart=/home/pat/ARCTERX2025/WAMV/listen.py \
+	--verbose \
+	--logfile=/home/pat/logs/WAMV.log
+
+Restart=always
+RestartSec=60
+
+[Install]
+WantedBy=multi-user.target
