@@ -17,6 +17,7 @@ def rsync(sources:list, args:ArgumentParser) -> bool:
     cmd = [args.rsync,
            "--verbose",
            "--archive",
+           "--exclude", "~.tmp~",
            "--temp-dir", args.cache,
            ]
     cmd.extend(sources)
