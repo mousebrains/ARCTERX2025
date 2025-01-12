@@ -1,0 +1,28 @@
+#
+# Save CSV information into the drifter database
+#
+# sudo cp Drifter_csv2DB.service /etc/systemd/system/
+#
+# sudo systemctl daemon-reload
+# sudo systemctl enable Drifter_csv2DB.service
+# sudo systemctl start Drifter_csv2DB.service
+#
+# Apr-2023, Pat Welch, pat@mousebrains.com
+
+[Unit]
+Description=Drifter CSV to DB
+
+[Service]
+# Launced by timer
+User=pat
+WorkingDirectory=/home/pat/ARCTERX/Drifters
+#
+ExecStart=/home/pat/ARCTERX/Drifters/csv2DB.py \
+	--logfile=/home/pat/logs/Drifter.csv2DB.log \
+	--verbose
+
+Restart=always
+RestartSec=60
+        
+[Install]
+WantedBy=multi-user.target
