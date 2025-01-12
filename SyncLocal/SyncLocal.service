@@ -11,7 +11,7 @@ Description=Sync local to ~/Sync/Shore
 User=pat
 Group=pat
 
-workingDirectory=/home/pat/logs
+WorkingDirectory=/home/pat/logs
 ExecStart=/home/pat/ARCTERX2025/SyncLocal/syncit.py \
 	--config=/home/pat/ARCTERX2025/SyncLocal/config.yaml \
 	--verbose \
