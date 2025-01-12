@@ -1,0 +1,29 @@
+#
+# Thompson's udpProcess service
+#
+# Apr-2023, Pat Welch, pat@mousebrains.com
+
+[Unit]
+Description=udpProcess
+
+[Service]
+# type=simple
+User=pat
+Group=pat
+
+WorkingDirectory=/home/pat/logs
+ReadWritePaths=/home/pat/logs
+ReadOnlyPaths=/
+
+ExecStart=/home/pat/ARCTERX/Thompson/udpProcess.py \
+	--logfile=/home/pat/logs/udpProcess.log \
+	55555
+
+Restart=always
+RestartSec=60
+
+# Harden
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,33 @@
+#
+# Fetch new information for the drifters
+#
+# N.B. This has two components, Drifter.service and Drifter.timer
+#
+# sudo cp Drifter.* /etc/systemd/system/
+#
+# sudo systemctl daemon-reload
+# sudo systemctl enable Drifter.timer Drifter.service
+# sudo systemctl start Drifter.timer
+#
+# Feb-2022, Pat Welch, pat@mousebrains.com
+
+[Unit]
+Description=Drifter data fetch
+
+[Service]
+# Launced by timer
+Type=oneshot
+User=pat
+WorkingDirectory=/home/pat/ARCTERX2025/Drifters
+#
+ExecStart=/home/pat/ARCTERX2025/Drifters/fetcher.py \
+	--credentials=~/.config/Drifters/.drifters_1 \
+	--csv=~/Sync/Shore/Drifter_1 \
+	--logfile=~/logs/Drifters_1.log \
+	--mailTo="pat@mousebrains.com" \
+	--mailSubject="Drifters_1" \
+	--verbose
+        
+[Install]
+WantedBy=multi-user.target
+

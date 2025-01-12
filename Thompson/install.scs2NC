@@ -1,6 +1,6 @@
 #! /bin/bash
 #
-# Install WaveGlider service and timer
+# Install Thompson UDP listener service and timer
 #
 # June-2023, Pat Welch, pat@mousebrains.com
 
@@ -8,6 +8,5 @@ myPath=`dirname $0`
 
 $myPath/TPWUtils/install.py \
 	--verbose \
-	--service=Drifter.service \
-	--service=Drifter_1.service \
+	--service=scs2NC.service \
 	$*

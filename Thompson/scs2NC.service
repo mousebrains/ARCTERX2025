@@ -1,0 +1,32 @@
+#
+# Extract information from SCS system into a NetCDF file
+#
+# N.B. This has two components, scs2NC.service and scs2NC.timer
+#
+# sudo cp scs2NC.* /etc/systemd/system/
+#
+# sudo systemctl daemon-reload
+# sudo systemctl enable scs2NC.timer scs2NC.service
+# sudo systemctl start scs2NC.timer
+#
+# Feb-2022, Pat Welch, pat@mousebrains.com
+
+[Unit]
+Description=scs2NC data fetch
+
+[Service]
+# Launced by timer
+Type=oneshot
+User=pat
+Group=pat
+WorkingDirectory=/home/pat/ARCTERX/Thompson
+#
+ExecStart=/home/pat/ARCTERX/Thompson/scs2NC.py \
+	--logfile=/home/pat/logs/scs2NCs.log \
+	--verbose \
+	--nc=/mnt/share/TN417/data/ship \
+	/mnt/ship/TN417/scs
+        
+[Install]
+WantedBy=multi-user.target
+

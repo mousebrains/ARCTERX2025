@@ -1,0 +1,28 @@
+#
+# Extract Thompson SCS information into a NetCDF file
+#
+# N.B. This has two components, scs2NC.service and scs2NC.timer
+#
+# sudo cp scs2NC.* /etc/systemd/system/
+#
+# sudo systemctl daemon-reload
+# sudo systemctl enable scs2NC.timer scs2NC.service
+# sudo systemctl start scs2NC.timer
+#
+# To view the timers:
+# 
+# sudo systemctl list-timers scs2NC
+# 
+# Feb-2022, Pat Welch, pat@mousebrains.com
+
+[Unit]
+Description=Extract SCS data into a NetCDF file
+
+[Timer]
+# dayOfWeek Year-Month-Day Hour:Minute:Second
+OnCalendar=*-*-* *:01/15:30
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+
