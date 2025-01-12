@@ -216,6 +216,9 @@ def loadIt(paths:list, ncPath:str, dbName:str) -> None:
             for fn in filenames[date]:
                 t0 = time.time()
                 (df, pos) = loadFile(fn, filenames[date][fn][0], filenames[date][fn][1])
+                if df is None:
+                    logging.info("No data from %s", fn)
+                    continue
                 t1 = time.time()
                 logging.info("Loaded %s in %s secs, sz %s pos %s", 
                              os.path.basename(fn), round(t1-t0,1), df.t.size, pos)

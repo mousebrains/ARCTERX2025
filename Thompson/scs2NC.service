@@ -19,13 +19,13 @@ Description=scs2NC data fetch
 Type=oneshot
 User=pat
 Group=pat
-WorkingDirectory=/home/pat/ARCTERX/Thompson
+WorkingDirectory=/home/pat/ARCTERX2025/Thompson
 #
-ExecStart=/home/pat/ARCTERX/Thompson/scs2NC.py \
+ExecStart=/home/pat/ARCTERX2025/Thompson/scs2NC.py \
 	--logfile=/home/pat/logs/scs2NCs.log \
 	--verbose \
-	--nc=/mnt/share/TN417/data/ship \
-	/mnt/ship/TN417/scs
+	--nc=/thompson/share/Data/ship \
+	/thompson/cruise/scs
         
 [Install]
 WantedBy=multi-user.target

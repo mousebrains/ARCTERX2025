@@ -15,7 +15,7 @@ WorkingDirectory=/home/pat/logs
 ReadWritePaths=/home/pat/logs
 ReadOnlyPaths=/
 
-ExecStart=/home/pat/ARCTERX/Thompson/udpProcess.py \
+ExecStart=/home/pat/ARCTERX2025/Thompson/udpProcess.py \
 	--logfile=/home/pat/logs/udpProcess.log \
 	55555
 
