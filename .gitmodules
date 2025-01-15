@@ -1,6 +1,3 @@
-[submodule "SSHTunnel"]
-	path = SSHTunnel
-	url = git@github.com:mousebrains/SSHTunnel.git
 [submodule "TPWUtils"]
 	path = TPWUtils
 	url = git@github.com:mousebrains/TPWUtils.git
