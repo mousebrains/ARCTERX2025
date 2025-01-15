@@ -16,15 +16,18 @@ import os
 import MakeTables as mt
 
 def mkDMS(val:bytes, direction:tuple[str]) -> str:
-    val = float(val)
-    qPos = val < 0
-    val = abs(val)
-    deg = math.floor(val)
-    minutes = (val % 1) * 60
-    seconds = (minutes % 1) * 60
-    minutes = math.floor(minutes)
+    try:
+        val = float(val)
+        qPos = val < 0
+        val = abs(val)
+        deg = math.floor(val)
+        minutes = (val % 1) * 60
+        seconds = (minutes % 1) * 60
+        minutes = math.floor(minutes)
 
-    return f"{deg:.0f} {minutes:.0f} {seconds:.2f} " + direction[qPos]
+        return f"{deg:.0f} {minutes:.0f} {seconds:.2f} " + direction[qPos]
+    except:
+        return None
 
 parser = ArgumentParser()
 Logger.addArgs(parser)
@@ -64,7 +67,7 @@ sql+= " ON CONFLICT DO NOTHING;"
 
 logging.info("Starting");
 
-with psycopg.connect(dbArg) as conn, conn.cursor() as cur:
+with psycopg.connect(dbArg, autocommit=True) as conn, conn.cursor() as cur:
     mt.mkPosition(cur)
 
 while True:
@@ -76,6 +79,16 @@ while True:
         logging.warning("bad record, %s", data)
         continue
     (time, lat, lon, cog, sog) = fields;
+    time = time.strip()
+    lat = lat.strip()
+    lon = lon.strip()
+    cog = cog.strip()
+    sog = sog.strip()
+
+    logging.info("time %s lat %s lon %s cog %s sog %s", time, lat, lon, cog, sog)
+
+    if not len(time) or not len(lat) or not len(lon): continue
+
     try:
         time = str(time, "utf-8")
     except:
@@ -83,16 +96,17 @@ while True:
         continue
 
     try:
-        payload = json.dumps(dict(
+        payload = dict(
             name = "WAM-V",
             time = time,
             lat = mkDMS(lat, ("N", "S")),
             lon = mkDMS(lon, ("E", "W")),
             sog = float(sog),
             cog = float(cog),
-            ))
+            )
         logging.info("Payload %s", payload)
-        tgt.sendto(bytes(payload + "\n", "utf-8"), tgtAddr)
+        if payload["lat"] is not None and payload["lon"] is not None: 
+            tgt.sendto(bytes(json.dumps(payload) + "\n", "utf-8"), tgtAddr)
     except:
         logging.exception("Failed in payload and send")
 
@@ -102,12 +116,11 @@ while True:
         lon = float(lon)
     except:
         logging.exception("Failed in conversion")
+        continue
 
     try:
-        with psycopg.connect(dbArg) as conn, conn.cursor() as cur:
-            cur.execute("BEGIN TRANSACTION;")
+        with psycopg.connect(dbArg, autocommit=True) as conn, conn.cursor() as cur:
             cur.execute(sql, ("wamv", time, lat, lon))
-            conn.commit()
     except:
         logging.exception("Failed in DB update")
 
