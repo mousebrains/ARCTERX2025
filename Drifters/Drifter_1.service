@@ -23,6 +23,7 @@ WorkingDirectory=/home/pat/ARCTERX2025/Drifters
 ExecStart=/home/pat/ARCTERX2025/Drifters/fetcher.py \
 	--credentials=~/.config/Drifters/.drifters_1 \
 	--csv=~/Sync/Shore/Drifter_1 \
+	--url="https://ldl.ucsd.edu/cgi-bin/projects/arcterx-leg1/drifter.py" \
 	--logfile=~/logs/Drifters_1.log \
 	--mailTo="pat@mousebrains.com" \
 	--mailSubject="Drifters_1" \
