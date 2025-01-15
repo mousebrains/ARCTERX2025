@@ -50,12 +50,10 @@ def mkFilePosition(cur:psycopg.Cursor, tbl:str="fileposition") -> str:
 def mkAll(db:str, user:str) -> None:
     dbArg = f"dbname={db} user={user}"
 
-    with psycopg.connect(dbArg) as conn:
+    with psycopg.connect(dbArg, autocommit=True) as conn:
         with conn.cursor() as cur:
-            beginTransaction(cur)
             mkPosition(cur)
             mkFilePosition(cur)
-            conn.commit()
 
 if __name__ == "__main__":
     from argparse import ArgumentParser
