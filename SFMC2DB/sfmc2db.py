@@ -19,7 +19,7 @@ import pandas as pd
 import numpy as np
 import MakeTables as mt
 
-def file2DB(fn:str, conn, table:str) -> None:
+def file2DB(fn:str, cur, table:str) -> None:
     (name, ext) = os.path.splitext(os.path.basename(fn))
     device = "slocum"
 
@@ -32,19 +32,16 @@ def file2DB(fn:str, conn, table:str) -> None:
     sql1+= " ON CONFLICT DO NOTHING;"
 
     df = pd.read_csv(fn)
-    with conn.cursor() as cur:
-        cur.execute(sql0, (name, device))
-        tMax = cur.fetchone()[0]
-        if tMax is not None:
-            df = df[df.time > tMax]
-            if df.empty: return
-        df.time = df.time.astype("datetime64[s]")
-        cur.execute("BEGIN;")
-        logging.info("Saving %s rows from %s", df.shape[0], fn)
-        for index in range(df.shape[0]):
-            row = df.iloc[index]
-            cur.execute(sql1, list(row))
-        conn.commit()
+    cur.execute(sql0, (name, device))
+    tMax = cur.fetchone()[0]
+    if tMax is not None:
+        df = df[df.time > tMax]
+        if df.empty: return
+    df.time = df.time.astype("datetime64[s]")
+    logging.info("Saving %s rows from %s", df.shape[0], fn)
+    for index in range(df.shape[0]):
+        row = df.iloc[index]
+        cur.execute(sql1, list(row))
 
 parser = ArgumentParser()
 Logger.addArgs(parser)
