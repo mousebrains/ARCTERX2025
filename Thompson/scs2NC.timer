@@ -20,7 +20,8 @@ Description=Extract SCS data into a NetCDF file
 
 [Timer]
 # dayOfWeek Year-Month-Day Hour:Minute:Second
-OnCalendar=*-*-* *:01/15:30
+# OnCalendar=*-*-* *:01/15:30
+OnCalendar=*-*-* *:00/5:30
 Persistent=true
 
 [Install]
