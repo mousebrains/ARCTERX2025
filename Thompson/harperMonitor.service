@@ -12,7 +12,7 @@ User=pat
 Group=pat
 
 WorkingDirectory=/home/pat/logs
-ReadWritePaths=/home/pat/logs
+ReadWritePaths=/home/pat/logs /thompson/share/Data/ship
 ReadOnlyPaths=/
 
 ExecStart=/home/pat/ARCTERX2025/Thompson/harperMonitor.py \
