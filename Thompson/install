@@ -6,8 +6,9 @@
 
 myPath=`dirname $0`
 
+	# --service=udpProcess.service \
+
 $myPath/TPWUtils/install.py \
 	--verbose \
-	--service=udpProcess.service \
 	--service=scs2NC.service \
 	$*
