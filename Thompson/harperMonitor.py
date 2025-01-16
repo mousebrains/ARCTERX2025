@@ -41,7 +41,7 @@ class NetCDFWriter(Thread):
                 cog=dict(type="f8", units="degrees true"),
                 sog=dict(type="f4", units="km/h"),
                 gyro=dict(type="f4", untis="degrees true"),
-                temperatureInlet=dict(type="f4", untis="Celsius"),
+                temperature_inlet=dict(type="f4", untis="Celsius"),
                 )
 
         while True:
@@ -262,7 +262,7 @@ class ConsumerTSG(Consumer, Thread):
                                                ).replace(tzinfo=datetime.timezone.utc).timestamp()
                 record = dict(
                         time=t,
-                        temperature = float(fields[2]),
+                        temperatureTSG = float(fields[2]),
                         conductivity = float(fields[3]),
                         salinity = float(fields[4]),
                         speed_of_sound = float(fields[5]),
