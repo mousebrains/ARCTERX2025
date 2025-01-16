@@ -30,7 +30,7 @@ Logger.addArgs(parser)
 parser.add_argument("port", nargs="+", type=int)
 args = parser.parse_args()
 
-Logger.mkLogger(args)
+Logger.mkLogger(args, logLevel=logging.DEBUG)
 
 thrds = []
 for port in args.port:
