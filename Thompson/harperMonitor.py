@@ -1,0 +1,297 @@
+#! /usr/bin/env python3
+#
+# Record UDP datagrame and save them into a file, no parsing
+#
+# Jan-2025, Pat Welch, pat@mousebrains.com
+
+from argparse import ArgumentParser
+import logging
+from TPWUtils import Logger
+from TPWUtils.Thread import Thread
+import datetime
+import queue
+import socket
+import os
+import re
+import math
+from netCDF4 import Dataset
+
+class NetCDFWriter(Thread):
+    def __init__(self, args:ArgumentParser):
+        Thread.__init__(self, "NC", args)
+        self.__queue = queue.Queue()
+
+    def put(self, record:dict) -> None:
+        self.__queue.put(record)
+
+    def runIt(self) -> None:
+        args = self.args
+        q = self.__queue
+        logging.info("Starting %s", args.netCDF)
+
+        items = dict(
+                temperatureTSG=("Celsius", "f4"),
+                conductivity=("V", "f4"),
+                salinity=("PSU", "f4"),
+                speed_of_sound=("m/s", "f4"),
+                latitude=("degrees north", "f8"),
+                longitude=("degrees east", "f8"),
+                cog=("degrees true", "f8"),
+                sog=("km/h", "f8"),
+                gyro=("degrees true", "f8"),
+                )
+
+        while True:
+            record = q.get()
+            if "time" not in record:
+                logging.warning("Time not in %s", record)
+                q.task_done()
+                continue
+
+            nc = Dataset(args.netCDF, "r+")
+
+            if "time" not in nc.dimensions:
+                dimID = nc.createDimension("time", None)
+                timeID = nc.createVariable("time", "f8", ("time",))
+                timeID.units = "seconds since 1970-01-01T00:00:00"
+                timeID.calendar = "utc"
+            else:
+                dimID = nc.dimensions["time"]
+                timeID = nc.variables["time"]
+
+            sz = dimID.size
+            timeID[sz] = record["time"]
+            for name in record:
+                if name == "time": continue
+                if name not in nc.variables:
+                    item = items[name] if name in items else ("", "f8")
+                    ident = nc.createVariable(name, item[1], ("time",))
+                    ident.units = item[0]
+                nc.variables[name][sz] = record[name]
+            nc.close()
+            q.task_done()
+
+class Consumer:
+    def __init__(self):
+        self.queue = queue.Queue()
+
+    def put(self, port:int, t:datetime.datetime, ipv4:str, sport:int, body:bytes) -> None:
+        self.queue.put((port, t, ipv4, sport, body))
+
+
+class ConsumerNav(Consumer, Thread):
+    def __init__(self, args:ArgumentParser, nc:NetCDFWriter):
+        Consumer.__init__(self)
+        Thread.__init__(self, "NAV", args)
+        self.__nc = nc
+
+    @staticmethod
+    def __nemaOk(body:bytes, chksum:bytes) -> bool:
+        a = 0
+        for c in body[1:]:
+            a ^= c
+        a &= 0xff
+        return (a & 0xff) == int(str(chksum, "utf-8"), 16)
+
+    @staticmethod
+    def __decodeDegMin(degmin:str, direction:str) -> float:
+        if not degmin: return None
+        sgn = -1 if direction.upper() in ["S", "W"] else 1
+        degmin = float(degmin)
+        sgn *= -1 if degmin < 0 else 1
+        degmin = abs(degmin)
+        deg = math.floor(degmin / 100)
+        minutes = degmin % 100
+        return sgn * (deg + minutes / 60)
+
+    @staticmethod
+    def __decodeFixTime(t:datetime.datetime, tt:str) -> datetime.datetime:
+        if not tt: return None
+        tt = float(tt)
+        h = int(math.floor(tt / 10000))
+        m = int(math.floor(tt / 100) % 100)
+        s = int(tt % 100)
+        tt = t.replace(hour=h, minute=m, second=s, microsecond=0)
+        if tt > t: tt -= datetime.timedelta(days=1)
+        return tt
+
+    @staticmethod
+    def __decodeFixDate(t:datetime.datetime, tt:str) -> datetime.datetime:
+        if not tt: return None
+        tt = float(tt)
+        d = int(math.floor(tt / 10000))
+        m = int(math.floor(tt / 100) % 100)
+        y = int(tt % 100)
+        tt = datetime.datetime.strptime(f"{y}-{m:02d}-{d:02d}", "%y-%m-%d")
+        tt = tt.replace(tzinfo=datetime.timezone.utc)
+        return tt
+
+    def __ingga(self, sentence:bytes):
+        fields = sentence.split(b",");
+        if len(fields) != 15:
+            logging.warning("Invalid sentence %s", sentence);
+            return
+        time = self.__decodeFixTime(
+                datetime.datetime.now(tz=datetime.timezone.utc),
+                str(fields[1], "utf-8"),
+                )
+        lat = self.__decodeDegMin(str(fields[2], "utf-8"), str(fields[3], "utf-8"))
+        lon = self.__decodeDegMin(str(fields[4], "utf-8"), str(fields[5], "utf-8"))
+        self.__nc.put(dict(
+            time=time.timestamp(),
+            latitude=lat,
+            longitude=lon,
+            ))
+
+    def __invtg(self, sentence:bytes):
+        fields = sentence.split(b",");
+        if len(fields) != 10:
+            logging.warning("Invalid sentence %s", sentence);
+            return
+        time = datetime.datetime.now(tz=datetime.timezone.utc).timestamp()
+        cog = float(fields[1])
+        sog = float(fields[7])
+        self.__nc.put(dict(
+            time=time,
+            cog=cog,
+            sog=sog,
+            ))
+
+    def __hehdt(self, sentence:bytes):
+        fields = sentence.split(b",");
+        if len(fields) != 3:
+            logging.warning("Invalid sentence %s", sentence)
+            return
+        self.__nc.put(dict(
+            time=datetime.datetime.now(tz=datetime.timezone.utc).timestamp(),
+            gyro=float(fields[1]),
+            ))
+
+    def runIt(self) -> None:
+        args = self.args;
+        port = args.navPort
+        q = self.queue
+
+        loggerName = self.name
+        logFile = os.path.join(args.rawDir, f"{port}.raw.log")
+        logging.info("Starting logfile %s", logFile)
+        myLogger = logging.getLogger(loggerName)
+        myHandler = logging.FileHandler(logFile, mode="a", encoding="utf-8")
+        myHandler.setLevel(logging.INFO)
+        myLogger.addHandler(myHandler)
+
+        while True:
+            (port, t, ipv4, sport, body) = q.get()
+            try:
+                output = str(body, "utf-8").strip()
+                myLogger.info("%s", output)
+            except:
+                logging.error("Converting %s to str", body)
+            for sentence in body.split():
+                fields = re.match(b"^([$][A-Z]+,.+)[*]([\d[A-Fa-f]{2})$", sentence)
+                if not fields:
+                    logging.warning("No fields found in %s", body)
+                    continue
+                if not self.__nemaOk(fields[1], fields[2]):
+                    logging.warning("NEMA Checksum issue in [1] -> %s [2] -> %s",
+                                    fields[1], fields[2])
+                    continue
+                if fields[1].startswith(b"$INGGA,"):
+                    self.__ingga(fields[1])
+                elif fields[1].startswith(b"$INVTG,"):
+                    self.__invtg(fields[1])
+                elif fields[1].startswith(b"$HEHDT,"):
+                    self.__hehdt(fields[1])
+                else:
+                    logging.warning("Not supported %s", fields[1])
+            q.task_done()
+
+class ConsumerTSG(Consumer, Thread):
+    def __init__(self, args:ArgumentParser, nc:NetCDFWriter):
+        Consumer.__init__(self)
+        Thread.__init__(self, "TSG", args)
+        self.__nc = nc
+
+    def runIt(self) -> None:
+        args = self.args;
+        nc = self.__nc;
+        port = args.tsgPort
+        q = self.queue
+
+        loggerName = self.name
+        logFile = os.path.join(args.rawDir, f"{port}.raw.log")
+        logging.info("Starting logfile %s", logFile)
+        myLogger = logging.getLogger(loggerName)
+        myHandler = logging.FileHandler(logFile, mode="a", encoding="utf-8")
+        myHandler.setLevel(logging.INFO)
+        myLogger.addHandler(myHandler)
+
+        while True:
+            (port, t, ipv4, sport, body) = q.get()
+            try:
+                body = str(body, "utf-8").strip()
+                myLogger.info("%s", body)
+                fields = re.split(r"[\s,]+", body.strip())
+                if len(fields) != 6:
+                    logging.warning("Bady TSG line, %s", body)
+                    continue
+                t = datetime.datetime.strptime(fields[0] + " " + fields[1], 
+                                               "%d-%m-%Y %H:%M:%S",
+                                               ).replace(tzinfo=datetime.timezone.utc).timestamp()
+                record = dict(
+                        time=t,
+                        temperature = float(fields[2]),
+                        conductivity = float(fields[3]),
+                        salinity = float(fields[4]),
+                        speed_of_sound = float(fields[5]),
+                        )
+                nc.put(record)
+            except:
+                logging.exception("Converting %s to str", body)
+            q.task_done()
+
+class Listener(Thread):
+    def __init__(self, port:int, consumer:Consumer, args:ArgumentParser):
+        Thread.__init__(self, f"{port}", args)
+        self.__port = port
+        self.__consumer = consumer
+
+    def runIt(self):
+        q = self.__consumer
+        port = self.__port
+        logging.info("Starting Listener for %s", port)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.bind(("", port))
+        while True:
+            (data, addr) = sock.recvfrom(4096)
+            t = datetime.datetime.now(tz=datetime.timezone.utc)
+            (ipv4, sport) = addr
+            q.put(port, t, ipv4, sport, data)
+            logging.debug("%s %s %s %s %s", port, t, ipv4, sport, data)
+
+parser = ArgumentParser()
+Logger.addArgs(parser)
+parser.add_argument("--navPort", type=int, default=55555, help="UDP port NAV sentence")
+parser.add_argument("--tsgPort", type=int, default=55777, help="UDP port for TSG data")
+parser.add_argument("--rawDir", type=str, default=".", help="Where to write RAW files to")
+parser.add_argument("--netCDF", type=str, default="./udp.nc", help="Name of output NetCDF file")
+args = parser.parse_args()
+
+Logger.mkLogger(args)
+
+thrds = []
+thrds.append(NetCDFWriter(args))
+if args.navPort and args.navPort > 0:
+    thrds.append(ConsumerNav(args, thrds[0]))
+    thrds.append(Listener(args.navPort, thrds[-1], args))
+if args.tsgPort and args.tsgPort > 0:
+    thrds.append(ConsumerTSG(args, thrds[0]))
+    thrds.append(Listener(args.tsgPort, thrds[-1], args))
+
+for thrd in thrds:
+    thrd.start()
+
+try:
+    Thread.waitForException()
+except:
+    logging.exception("Unexpected")
