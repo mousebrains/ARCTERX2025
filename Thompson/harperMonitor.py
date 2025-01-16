@@ -13,6 +13,7 @@ import queue
 import socket
 import os
 import re
+import time
 import math
 from netCDF4 import Dataset
 
@@ -30,49 +31,80 @@ class NetCDFWriter(Thread):
         logging.info("Starting %s", args.netCDF)
 
         items = dict(
-                temperatureTSG=("Celsius", "f4"),
-                conductivity=("V", "f4"),
-                salinity=("PSU", "f4"),
-                speed_of_sound=("m/s", "f4"),
-                latitude=("degrees north", "f8"),
-                longitude=("degrees east", "f8"),
-                cog=("degrees true", "f8"),
-                sog=("km/h", "f8"),
-                gyro=("degrees true", "f8"),
+                time=dict(type="f8", units="seconds since 1970-01-01T00:00:00", calendar="utc"),
+                temperatureTSG=dict(type="f4", units="Celsius"),
+                conductivity=dict(type="f4", units="V"),
+                salinity=dict(type="f4", units="PSU"),
+                speed_of_sound=dict(type="f4", units="m/s"),
+                latitude=dict(type="f8", units="degrees north"),
+                longitude=dict(type="f8", units="degrees east"),
+                cog=dict(type="f8", units="degrees true"),
+                sog=dict(type="f4", units="km/h"),
+                gyro=dict(type="f4", untis="degrees true"),
+                temperatureInlet=dict(type="f4", untis="Celsius"),
                 )
 
         while True:
             record = q.get()
+            t0 = time.time()
+
             if "time" not in record:
                 logging.warning("Time not in %s", record)
                 q.task_done()
                 continue
 
-            nc = Dataset(args.netCDF, "r+")
+            data = {}
+            data[round(record["time"])] = record
+    
+            while True:
+                dt = args.delay - (time.time() - t0)
+                if dt <= 0: break
+                try:
+                    a = q.get(block=True, timeout=dt)
+                    if "time" not in record:
+                        logging.warning("Time not in %s", record)
+                        continue
+                    t = round(a["time"])
+                    if t in data:
+                        data[t].update(a)
+                    else:
+                        data[t] = a
+                except queue.Empty:
+                    break
 
-            if "time" not in nc.dimensions:
-                dimID = nc.createDimension("time", None)
-                timeID = nc.createVariable("time", "f8", ("time",))
-                timeID.units = "seconds since 1970-01-01T00:00:00"
-                timeID.calendar = "utc"
-            else:
-                dimID = nc.dimensions["time"]
-                timeID = nc.variables["time"]
+            logging.info("Writeing %s times", len(data))
 
-            sz = dimID.size
-            if sz and timeID[sz-1] == record["time"]:
-                sz = sz - 1
-            else:
-                timeID[sz] = record["time"]
+            with Dataset(args.netCDF, "r+") as nc:
+                if "time" not in nc.dimensions:
+                    dimID = nc.createDimension("time", None)
+                else:
+                    dimID = nc.dimensions["time"]
 
-            for name in record:
-                if name == "time": continue
-                if name not in nc.variables:
-                    item = items[name] if name in items else ("", "f8")
-                    ident = nc.createVariable(name, item[1], ("time",))
-                    ident.units = item[0]
-                nc.variables[name][sz] = record[name]
-            nc.close()
+                for t in sorted(data):
+                    record = data[t]
+                    sz = dimID.size
+                    if sz and "time" in nc.variables:
+                        for offset in range(1,20):
+                            if nc.variables["time"][sz-offset] < t: break
+                            if nc.variables["time"][sz-offset] == t:
+                                sz = sz - offset
+                                break
+
+                    for name in record:
+                        if name not in nc.variables:
+                            if name in items:
+                                item = items[name]
+                                varID = nc.createVariable(name, item["type"], ("time",))
+                                for attr in item:
+                                    if attr != "type": 
+                                        varID.setncattr(attr, item[attr])
+                            else:
+                                nc.createVariable(name, "f4", ("time",))
+                        if name == "time":
+                            nc.variables[name][sz] = t
+                        else:
+                            nc.variables[name][sz] = record[name]
+
             q.task_done()
 
 class Consumer:
@@ -300,6 +332,7 @@ parser.add_argument("--navPort", type=int, default=55555, help="UDP port NAV sen
 parser.add_argument("--tsgPort", type=int, default=55777, help="UDP port for TSG data")
 parser.add_argument("--intakePort", type=int, default=55778, help="UDP port for inlet temperatre")
 parser.add_argument("--netCDF", type=str, default="./udp.nc", help="Name of output NetCDF file")
+parser.add_argument("--delay", type=float, default=5, help="Number of seconds to batch updates")
 args = parser.parse_args()
 
 Logger.mkLogger(args)
