@@ -19,7 +19,7 @@ ExecStart=/home/pat/ARCTERX2025/Thompson/harperMonitor.py \
 	--logfile=/home/pat/logs/harperMonitor.log \
 	--navPort=55555 \
 	--tsgPort=55777 \
-	--rawDir=/home/pat/logs \
+	--intakePort=55778 \
 	--netCDF=/thompson/share/Data/ship/udp.nc \
 	--verbose
 
