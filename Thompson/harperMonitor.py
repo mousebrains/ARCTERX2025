@@ -60,7 +60,11 @@ class NetCDFWriter(Thread):
                 timeID = nc.variables["time"]
 
             sz = dimID.size
-            timeID[sz] = record["time"]
+            if sz and timeID[sz-1] == record["time"]:
+                sz = sz - 1
+            else:
+                timeID[sz] = record["time"]
+
             for name in record:
                 if name == "time": continue
                 if name not in nc.variables:
@@ -172,19 +176,12 @@ class ConsumerNav(Consumer, Thread):
         port = args.navPort
         q = self.queue
 
-        loggerName = self.name
-        logFile = os.path.join(args.rawDir, f"{port}.raw.log")
-        logging.info("Starting logfile %s", logFile)
-        myLogger = logging.getLogger(loggerName)
-        myHandler = logging.FileHandler(logFile, mode="a", encoding="utf-8")
-        myHandler.setLevel(logging.INFO)
-        myLogger.addHandler(myHandler)
+        logging.info("Starting port %s", port)
 
         while True:
             (port, t, ipv4, sport, body) = q.get()
             try:
                 output = str(body, "utf-8").strip()
-                myLogger.info("%s", output)
             except:
                 logging.error("Converting %s to str", body)
             for sentence in body.split():
@@ -218,19 +215,12 @@ class ConsumerTSG(Consumer, Thread):
         port = args.tsgPort
         q = self.queue
 
-        loggerName = self.name
-        logFile = os.path.join(args.rawDir, f"{port}.raw.log")
-        logging.info("Starting logfile %s", logFile)
-        myLogger = logging.getLogger(loggerName)
-        myHandler = logging.FileHandler(logFile, mode="a", encoding="utf-8")
-        myHandler.setLevel(logging.INFO)
-        myLogger.addHandler(myHandler)
+        logging.info("Starting port %s", port)
 
         while True:
             (port, t, ipv4, sport, body) = q.get()
             try:
                 body = str(body, "utf-8").strip()
-                myLogger.info("%s", body)
                 fields = re.split(r"[\s,]+", body.strip())
                 if len(fields) != 6:
                     logging.warning("Bady TSG line, %s", body)
@@ -244,6 +234,41 @@ class ConsumerTSG(Consumer, Thread):
                         conductivity = float(fields[3]),
                         salinity = float(fields[4]),
                         speed_of_sound = float(fields[5]),
+                        )
+                nc.put(record)
+            except:
+                logging.exception("Converting %s to str", body)
+            q.task_done()
+
+class ConsumerIntake(Consumer, Thread):
+    def __init__(self, args:ArgumentParser, nc:NetCDFWriter):
+        Consumer.__init__(self)
+        Thread.__init__(self, "Intake", args)
+        self.__nc = nc
+
+    def runIt(self) -> None:
+        args = self.args;
+        nc = self.__nc;
+        port = args.intakePort
+        q = self.queue
+
+        logging.info("Starting port %s", port)
+
+        while True:
+            (port, t, ipv4, sport, body) = q.get()
+            try:
+                body = str(body, "utf-8").strip()
+                fields = re.split(r"[\s,]+", body.strip())
+                if len(fields) != 3:
+                    logging.warning("Bady intake line, %s", body)
+                    q.task_done()
+                    continue
+                t = datetime.datetime.strptime(fields[0] + " " + fields[1], 
+                                               "%d-%m-%Y %H:%M:%S",
+                                               ).replace(tzinfo=datetime.timezone.utc).timestamp()
+                record = dict(
+                        time=t,
+                        temperature_inlet = float(fields[2]),
                         )
                 nc.put(record)
             except:
@@ -273,7 +298,7 @@ parser = ArgumentParser()
 Logger.addArgs(parser)
 parser.add_argument("--navPort", type=int, default=55555, help="UDP port NAV sentence")
 parser.add_argument("--tsgPort", type=int, default=55777, help="UDP port for TSG data")
-parser.add_argument("--rawDir", type=str, default=".", help="Where to write RAW files to")
+parser.add_argument("--intakePort", type=int, default=55778, help="UDP port for inlet temperatre")
 parser.add_argument("--netCDF", type=str, default="./udp.nc", help="Name of output NetCDF file")
 args = parser.parse_args()
 
@@ -281,12 +306,18 @@ Logger.mkLogger(args)
 
 thrds = []
 thrds.append(NetCDFWriter(args))
+
 if args.navPort and args.navPort > 0:
     thrds.append(ConsumerNav(args, thrds[0]))
     thrds.append(Listener(args.navPort, thrds[-1], args))
+
 if args.tsgPort and args.tsgPort > 0:
     thrds.append(ConsumerTSG(args, thrds[0]))
     thrds.append(Listener(args.tsgPort, thrds[-1], args))
+
+if args.intakePort and args.intakePort > 0:
+    thrds.append(ConsumerIntake(args, thrds[0]))
+    thrds.append(Listener(args.intakePort, thrds[-1], args))
 
 for thrd in thrds:
     thrd.start()
