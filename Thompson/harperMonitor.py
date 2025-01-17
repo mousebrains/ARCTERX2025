@@ -72,9 +72,11 @@ class NetCDFWriter(Thread):
                 except queue.Empty:
                     break
 
-            logging.info("Writeing %s times", len(data))
+            now=datetime.datetime.now(tz=datetime.timezone.utc)
+            fn = args.netCDF + now.strftime("%Y%m%d") + ".nc"
+            logging.info("Writeing %s times to %s", len(data), fn)
 
-            with Dataset(args.netCDF, "r+") as nc:
+            with Dataset(fn, "r+") as nc:
                 if "time" not in nc.dimensions:
                     dimID = nc.createDimension("time", None)
                 else:
@@ -331,7 +333,7 @@ Logger.addArgs(parser)
 parser.add_argument("--navPort", type=int, default=55555, help="UDP port NAV sentence")
 parser.add_argument("--tsgPort", type=int, default=55777, help="UDP port for TSG data")
 parser.add_argument("--intakePort", type=int, default=55778, help="UDP port for inlet temperatre")
-parser.add_argument("--netCDF", type=str, default="./udp.nc", help="Name of output NetCDF file")
+parser.add_argument("--netCDF", type=str, default="./udp.", help="Prefix of output NetCDF file")
 parser.add_argument("--delay", type=float, default=5, help="Number of seconds to batch updates")
 args = parser.parse_args()
 
