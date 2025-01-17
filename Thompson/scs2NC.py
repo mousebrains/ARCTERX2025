@@ -241,11 +241,12 @@ def loadIt(paths:list, ncPath:str, dbName:str) -> None:
 if __name__ == "__main__":
     from argparse import ArgumentParser
     from TPWUtils import Logger
+    from mergeShip import combineFiles
 
     parser = ArgumentParser()
     Logger.addArgs(parser)
     parser.add_argument("directory", type=str, nargs="+", help="Directories to look in")
-    parser.add_argument("--nc", type=str, required=True, help="Output filename")
+    parser.add_argument("--nc", type=str, required=True, help="Output directory")
     parser.add_argument("--db", type=str, default="arcterx", help="Database name")
     args = parser.parse_args()
 
@@ -258,5 +259,6 @@ if __name__ == "__main__":
             directories.append(os.path.abspath(os.path.expanduser(directory)))
 
         loadIt(directories, args.nc, args.db)
+        combineFiles(args.nc, r"ship.\d+.nc",  os.path.join(args.nc, "ship.nc"))
     except:
         logging.exception("GotMe")
