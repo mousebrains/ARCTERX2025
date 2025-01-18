@@ -1,0 +1,1 @@
+# There are future points inserted into the drifter tracks. cleanPEARL.py removes all duplicate IME/lat/lon points and retains only the last one.
