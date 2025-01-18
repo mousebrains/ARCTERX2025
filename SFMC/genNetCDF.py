@@ -26,7 +26,7 @@ class Builder(Thread):
 
         nameMap = dict(
                 boomer="mkBoomer",
-                starbuck="mkStarBuck",
+                starbuck="mkStarbuck",
                 catalina="mkCatalina",
                 mariner="mkMariner",
                 )
