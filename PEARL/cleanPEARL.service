@@ -1,0 +1,31 @@
+#
+# Clean duplicate points from PEARL drifter
+#
+# Jan-2025, Pat Welch, pat@mousebrains.com
+
+[Unit]
+Description=Clean PEARL drifter data
+
+[Service]
+# type=simple
+User=pat
+Group=pat
+
+WorkingDirectory=/home/pat/logs
+ReadWritePaths=/home/pat/logs /home/pat/Sync/Shore
+ReadOnlyPaths=/
+
+ExecStart=/home/pat/ARCTERX2025/PEARL/cleanPEARL.py \
+	--logfile=/home/pat/logs/cleanPearl.log \
+	--verbose \
+	/home/pat/Sync/Shore/pearl-drifters/pearl_drifter_cumulative_positions.csv \
+	/home/pat/Sync/Shore/pearl-drifters/pearl_drifter_cleaned.csv
+
+Restart=always
+RestartSec=60
+
+# Harden
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
