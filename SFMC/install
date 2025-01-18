@@ -1,0 +1,12 @@
+#! /bin/bash
+#
+# Install PEARL drifter cleaner
+#
+# Jan-2025, Pat Welch, pat@mousebrains.com
+
+myPath=`dirname $0`
+
+$myPath/TPWUtils/install.py \
+	--verbose \
+	--service=SFMC2NetCDF.service \
+	$*

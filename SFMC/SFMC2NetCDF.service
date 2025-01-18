@@ -1,0 +1,31 @@
+#
+# Generate NetCDF files for SFMC's t?d and s?d
+#
+# Jan-2025, Pat Welch, pat@mousebrains.com
+
+[Unit]
+Description=Generate NetCDF files from SFMC's [ts]?d files
+
+[Service]
+# type=simple
+User=pat
+Group=pat
+
+WorkingDirectory=/home/pat/logs
+ReadWritePaths=/home/pat/logs /home/pat/Sync/Processed
+ReadOnlyPaths=/
+
+ExecStart=/home/pat/ARCTERX2025/SFMC/genNetCDF.py \
+	--logfile=/home/pat/logs/SFMC2NetCDF.log \
+	--verbose \
+	--source=/home/pat/Sync/Shore/SFMC \
+	--destination=/home/pat/Sync/Processed/SFMC
+
+Restart=always
+RestartSec=60
+
+# Harden
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
