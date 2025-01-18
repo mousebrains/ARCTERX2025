@@ -334,7 +334,7 @@ parser.add_argument("--navPort", type=int, default=55555, help="UDP port NAV sen
 parser.add_argument("--tsgPort", type=int, default=55777, help="UDP port for TSG data")
 parser.add_argument("--intakePort", type=int, default=55778, help="UDP port for inlet temperatre")
 parser.add_argument("--netCDF", type=str, default="./udp.", help="Prefix of output NetCDF file")
-parser.add_argument("--delay", type=float, default=5, help="Number of seconds to batch updates")
+parser.add_argument("--delay", type=float, default=30, help="Number of seconds to batch updates")
 args = parser.parse_args()
 
 Logger.mkLogger(args)
