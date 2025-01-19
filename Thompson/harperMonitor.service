@@ -21,9 +21,9 @@ ExecStart=/home/pat/ARCTERX2025/Thompson/harperMonitor.py \
 	--tsgPort=55777 \
 	--intakePort=55778 \
 	--verbose \
-	--copyTo=/thompson/share/Data/tpw \
+	--copyTo=/thompson/share/Data/ship \
 	--config=/home/pat/ARCTERX2025/Thompson/udp.yaml \
-	--csvFilename=/home/pat/probar/tpw.csv \
+	--csvFilename=/home/pat/Sync/Ship/ship/ship.csv \
 	--csvBatch=60 \
 	/home/pat/probar/udp.nc \
 	/home/pat/probar/udp.YYYYMMDD.nc
