@@ -24,7 +24,9 @@ WorkingDirectory=/home/pat/ARCTERX2025/Thompson
 ExecStart=/home/pat/ARCTERX2025/Thompson/scs2NC.py \
 	--logfile=/home/pat/logs/scs2NCs.log \
 	--verbose \
-	--nc=/thompson/share/Data/ship \
+	--nc=/home/pat/probar \
+	--copyTo=/thompson/share/Data/ship \
+	--config=/home/pat/ARCTERX2025/Thompson/scs.yaml \
 	/thompson/cruise/scs
         
 [Install]

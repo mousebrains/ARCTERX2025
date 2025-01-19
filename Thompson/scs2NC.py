@@ -4,8 +4,10 @@
 #
 # April-2023, Pat Welch, pat@mousebrains.com
 
+from argparse import ArgumentParser
 import logging
-import os.path
+import os
+from tempfile import NamedTemporaryFile
 import glob
 import datetime
 import math
@@ -17,6 +19,8 @@ from mkNC import createNetCDF
 from netCDF4 import Dataset
 import psycopg
 import sys
+from ncWriter import ncWriter
+import yaml
 
 def mkFilenames(paths:tuple, cur) -> dict:
     patterns = {
@@ -200,9 +204,17 @@ def getTimeOffset(nc) -> np.int64:
     index = units.find(since) + len(since)
     return np.datetime64(units[index:])
 
-def loadIt(paths:list, ncPath:str, dbName:str) -> None:
+def loadIt(paths:list, args:ArgumentParser) -> None:
+    ncPath = args.nc
+    dbName = args.db
+    copyTo = args.copyTo
+    bufferSize = args.bufferSize
+
     sql = "INSERT INTO filePosition VALUES (%s, %s)"
     sql+= " ON CONFLICT (filename) DO UPDATE SET position=EXCLUDED.position;"
+
+    sfn = os.path.join(ncPath, "ship.nc") # Global set
+    toCopy = set()
 
     with psycopg.connect(f"dbname={dbName}") as db:
         cur = db.cursor()
@@ -226,39 +238,59 @@ def loadIt(paths:list, ncPath:str, dbName:str) -> None:
                 if df is not None and not df.empty: 
                     frames.append(df)
    
-            if not os.path.isfile(ofn):
-                tMin = None
-                for df in frames:
-                    tMin = df.t.min() if tMin is None else min(tMin, df.t.min())
-                createNetCDF(ofn, tMin.to_datetime64())
+            for fn in [sfn, ofn]:
+                if not os.path.isfile(fn): 
+                    tMin = None
+                    for df in frames:
+                        tMin = df.t.min() if tMin is None else min(tMin, df.t.min())
+                    if not tMin: continue
+                    createNetCDF(fn, tMin.to_datetime64())
 
-            with Dataset(ofn, "a") as nc:
-                tBase = getTimeOffset(nc)
-                for df in frames: saveDataframe(nc, df, tBase)
+                with Dataset(fn, "a") as nc:
+                    tBase = getTimeOffset(nc)
+                    for df in frames: saveDataframe(nc, df, tBase)
+
+                toCopy.add(fn)
 
             db.commit()
 
+        if copyTo:
+            for fn in toCopy:
+                cfn = os.path.join(copyTo, os.path.basename(fn))
+                totSize = 0
+                stime = time.time()
+                with NamedTemporaryFile(dir=copyTo, delete=False) as ofp, open(fn, "rb") as ifp:
+                    tfn = ofp.name
+                    buffer = ifp.read(bufferSize)
+                    while buffer:
+                        totSize += ofp.write(buffer)
+                        buffer = ifp.read(bufferSize)
+                os.replace(tfn, cfn)
+                logging.info("Took %s seconds to copy  %s bytes to %s",
+                             time.time() - stime, totSize, cfn)
+
+
 if __name__ == "__main__":
-    from argparse import ArgumentParser
     from TPWUtils import Logger
-    from mergeShip import combineFiles
 
     parser = ArgumentParser()
     Logger.addArgs(parser)
     parser.add_argument("directory", type=str, nargs="+", help="Directories to look in")
-    parser.add_argument("--nc", type=str, required=True, help="Output directory")
+    parser.add_argument("--nc", type=str, required=True, help="Output NetCDF directory")
     parser.add_argument("--db", type=str, default="arcterx", help="Database name")
+    parser.add_argument("--config", type=str, required=True, 
+                        help="YAML variable definitions")
+    parser.add_argument("--copyTo", type=str, help="Directory to copy files to, atomically")
+    parser.add_argument("--bufferSize", type=int, default=1024*1024, help="Buffer size for copy to")
     args = parser.parse_args()
 
     Logger.mkLogger(args, fmt="%(asctime)s %(levelname)s: %(message)s")
 
     try:
-        args.nc = os.path.abspath(os.path.expanduser(args.nc))
         directories = []
         for directory in args.directory:
             directories.append(os.path.abspath(os.path.expanduser(directory)))
 
-        loadIt(directories, args.nc, args.db)
-        combineFiles(args.nc, r"ship.\d+.nc",  os.path.join(args.nc, "ship.nc"))
+        loadIt(directories, args)
     except:
         logging.exception("GotMe")
