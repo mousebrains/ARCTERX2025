@@ -1,0 +1,48 @@
+global:
+  Conventions: CF-1.8
+  title: Thompson SCS data
+  comment: Data harvested from Thompson's udp datagrams
+  
+time:
+  timeName: True
+  type: u4
+  long_name: time
+  calendar: proleptic_gregorian
+
+lat:
+  type: f8
+  units: degrees_north
+  long_name: latitude
+  standard_name: latitude
+
+lon:
+  type: f8
+  units: degrees_east
+  long_name: longitude
+  standard_name: longitude
+
+gyro:
+  type: f4
+  units: degrees true
+  long_name: heading
+  standard_name: heading
+
+sog:
+  type: f4
+  units: m/s
+  long_name: speed_over_ground
+
+cog:
+  type: f4
+  units: degrees
+  long_name: course_over_ground
+
+temperatureInlet:
+  type: f4
+  units: degC
+  long_name: temperature_at_inlet
+
+salinity:
+  type: f4
+  units: "1"
+  long_name: salinity

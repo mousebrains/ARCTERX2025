@@ -12,7 +12,7 @@ User=pat
 Group=pat
 
 WorkingDirectory=/home/pat/logs
-ReadWritePaths=/home/pat/logs /thompson/share/Data/ship
+ReadWritePaths=/home/pat/logs /thompson/share/Data/tpw /home/pat/probar
 ReadOnlyPaths=/
 
 ExecStart=/home/pat/ARCTERX2025/Thompson/harperMonitor.py \
@@ -20,8 +20,13 @@ ExecStart=/home/pat/ARCTERX2025/Thompson/harperMonitor.py \
 	--navPort=55555 \
 	--tsgPort=55777 \
 	--intakePort=55778 \
-	--netCDF=/thompson/share/Data/ship/udp.\
-	--verbose
+	--verbose \
+	--copyTo=/thompson/share/Data/tpw \
+	--config=/home/pat/ARCTERX2025/Thompson/udp.yaml \
+	--csvFilename=/home/pat/probar/tpw.csv \
+	--csvBatch=60 \
+	/home/pat/probar/udp.nc \
+	/home/pat/probar/udp.YYYYMMDD.nc
 
 Restart=always
 RestartSec=60

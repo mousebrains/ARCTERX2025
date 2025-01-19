@@ -1,0 +1,113 @@
+global:
+  Conventions: CF-1.8
+  title: Thompson SCS data
+  comment: Data harvested from Thompson's scs system
+  
+time:
+  timeName: True
+  type: u4
+  long_name: time
+  calendar: proleptic_gregorian
+
+lat:
+  type: f8
+  units: degrees_north
+  long_name: latitude
+  standard_name: latitude
+
+lon:
+  type: f8
+  units: degrees_east
+  long_name: longitude
+  standard_name: longitude
+
+sog:
+  type: f4
+  units: m/s
+  long_name: speed_over_ground
+
+cog:
+  type: f4
+  units: degrees
+  long_name: course_over_ground
+
+wSpd:
+  type: f4
+  units: m/s
+  long_name: wind_speed_true
+
+wDir:
+  type: f4
+  units: degrees
+  long_name: wind_direction_true
+
+par:
+  type: f4
+  units: uE m^-2 s^-1
+  long_name: photosynthetically_active_radiation
+
+temperatureAir:
+  type: f4
+  units: degC
+  long_name: temperature_air
+
+RH:
+  type: f4
+  units: percent
+  long_name: relative_humidity
+
+Pair:
+  type: f4
+  units: millibar
+  long_name: air_pressure
+
+shortWave:
+  type: f4
+  units: W m^-2
+  long_name: short_wave_radiation
+
+longWave:
+  type: f4
+  units: W m^-2
+  long_name: long_wave_radiation
+
+temperatureInlet:
+  type: f4
+  units: degC
+  long_name: temperature_at_inlet
+
+temperatureTSG:
+  type: f4
+  units: degC
+  long_name: temperature_at_TSG
+
+conductivity:
+  type: f4
+  units: volts
+  long_name: conductivity
+
+salinity:
+  type: f4
+  units: "1"
+  long_name: salinity
+
+fluorometer:
+  type: u2
+  units: counts
+  long_name: fluorometer
+
+flThermistor:
+  type: u2
+  units: counts
+  long_name: fluorometer_thermistor
+
+depthMB:
+  type: f4
+  units: meters
+  long_name: depth_from_multibeam
+
+depthKn:
+  type: f4
+  units: meters
+  long_name: depth_from_pkel99
+  comment: Water depth from Knudsen PKEL99 3.5kHz
