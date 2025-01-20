@@ -1,0 +1,23 @@
+#
+# Rsync files to the shoreside server
+#
+# Jan-2025, Pat Welch, pat@mousebrains.com
+
+[Unit]
+Description=Sync files to shore side
+
+[Service]
+# Launced by timer
+Type=oneshot
+User=pat
+Group=pat
+WorkingDirectory=/home/pat/logs
+#
+ExecStart=/home/pat/ARCTERX2025/Sync2Shore/sync2Shore.py \
+	--logfile=/home/pat/logs/sync2Shore.log \
+	--verbose 
+	--config=/home/pat/ARCTERX2025/Sync2Shore/config.yaml
+        
+[Install]
+WantedBy=multi-user.target
+

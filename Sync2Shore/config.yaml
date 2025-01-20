@@ -1,0 +1,21 @@
+rsync_opts:
+  - --archive
+  - --stats
+  - --exclude
+  - ._*
+
+VMP:
+  src: /thompson/share/Data/VMP
+  tgt: /home/pat/Sync/Ship
+
+Ship:
+  src: /thompson/share/Data/ship
+  tgt: /home/pat/Sync/Ship
+
+uCTD:
+  src: /thompson/share/Data/uCTD
+  tgt: /home/pat/Sync/Ship
+
+ADCP:
+  src: /thompson/cruise/adcp/proc
+  tgt: /home/pat/Sync/Ship/adcp

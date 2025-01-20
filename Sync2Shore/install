@@ -1,0 +1,10 @@
+#! /usr/bin/bash
+#
+# Install service and timer for syncing to shore
+#
+# Jan-2025, Pat Welch, pat@mousebrains.com
+
+TPWUtils/install.py \
+	--verbose \
+	--service=Sync2Shore.service \
+	$*
