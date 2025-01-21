@@ -12,8 +12,8 @@ User=pat
 Group=pat
 
 WorkingDirectory=/home/pat/logs
-ReadWritePaths=/home/pat/logs /thompson/share/Data/ship /home/pat/probar /home/pat/Sync/Ship/ship
-ReadOnlyPaths=/
+# ReadWritePaths=/home/pat/logs /thompson/share/Data/ship /home/pat/probar /home/pat/Sync/Ship/ship
+# ReadOnlyPaths=/
 
 ExecStart=/home/pat/ARCTERX2025/Thompson/harperMonitor.py \
 	--logfile=/home/pat/logs/harperMonitor.log \
