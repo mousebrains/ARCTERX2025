@@ -3,6 +3,8 @@ rsync_opts:
   - --stats
   - --exclude
   - ._*
+  - --exclude
+  - .DS_Store
 
 VMP:
   src: /thompson/share/Data/VMP

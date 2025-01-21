@@ -122,7 +122,7 @@ class ConsumerNav(Consumer, Thread):
             (t, body) = q.get()
 
             for sentence in body.split():
-                fields = re.match(b"^([$][A-Z]+,.+)[*]([\d[A-Fa-f]{2})$", sentence)
+                fields = re.match(b"^([$][A-Z]+,.+)[*]([0-9A-Fa-f]{2})$", sentence)
                 if not fields:
                     logging.warning("No fields found in %s", body)
                     continue
