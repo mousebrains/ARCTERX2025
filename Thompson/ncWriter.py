@@ -71,12 +71,24 @@ class ncWriter(Thread):
     def initializeNC(self, fn:str):
         varDefs = self.__varDefs
 
+        globalOpts = dict(
+                compression = "zlib",
+                complevel = 5,
+                )
+
+        skipNames = ["global", "global_opts"]
+        skipKeys = list(globalOpts.keys())
+        skipKeys.append("type")
+        skipKeys.append("timeName")
+
+        if "global_opts" in varDefs and varDefs["global_opts"]:
+            globalOpts.update(varDefs["global_opts"])
+
         timeName = "time"
         for key in varDefs:
-            if key == "global": continue
-
+            if key in skipNames: continue
             item = varDefs[key]
-            if "timeName" in item and item["timeName"]:
+            if item and "timeName" in item and item["timeName"]:
                 timeName = key
                 break
 
@@ -89,17 +101,24 @@ class ncWriter(Thread):
 
             if timeName not in nc.dimensions:
                 nc.createDimension(timeName, size=None)
+
             for name in varDefs:
-                if name == "global": continue
+                if name in skipNames: continue
                 if name in nc.variables: continue
                 item = varDefs[name]
+                opts = globalOpts.copy()
+                for key in globalOpts:
+                    if key in item:
+                        opts[key] = item[key]
+
                 varId = nc.createVariable(name,
                                           datatype=item["type"],
                                           dimensions=(timeName,),
                                           fill_value=self.getFillValue(item["type"]),
+                                          **opts,
                                           )
                 for key in item:
-                    if key not in ["type", "timeName"]:
+                    if key not in skipKeys:
                         varId.setncattr(key, item[key])
 
     def initializeAllNC(self, filenames:list):
