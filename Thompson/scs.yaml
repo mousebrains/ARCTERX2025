@@ -5,7 +5,7 @@ global:
   
 time:
   timeName: True
-  type: u4
+  type: i4
   long_name: time
   calendar: proleptic_gregorian
 
@@ -41,6 +41,26 @@ wDir:
   units: degrees
   long_name: wind_direction_true
 
+wSpdPort:
+  type: f4
+  units: m/s
+  long_name: wind_speed_true_port
+
+wDirPort:
+  type: f4
+  units: degrees
+  long_name: wind_direction_true_port
+
+wSpdStbd:
+  type: f4
+  units: m/s
+  long_name: wind_speed_true_stbd
+
+wDirStbd:
+  type: f4
+  units: degrees
+  long_name: wind_direction_true_stbd
+
 par:
   type: f4
   units: uE m^-2 s^-1
@@ -56,10 +76,10 @@ RH:
   units: percent
   long_name: relative_humidity
 
-Pair:
+pressureAir:
   type: f4
   units: millibar
-  long_name: air_pressure
+  long_name: pressure_air
 
 shortWave:
   type: f4
@@ -106,7 +126,7 @@ depthMB:
   units: meters
   long_name: depth_from_multibeam
 
-depthKn:
+depthKN:
   type: f4
   units: meters
   long_name: depth_from_pkel99
