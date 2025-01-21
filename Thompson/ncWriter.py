@@ -1,6 +1,6 @@
 #
 # Write out a dictionary to a NetCDF file
-# 
+#
 # Jan-2025, Pat Welch, pat@mousebrains.com
 
 from argparse import ArgumentParser
@@ -12,6 +12,7 @@ import queue
 import datetime
 import os.path
 import time
+import sys
 from tempfile import NamedTemporaryFile
 
 class ncWriter(Thread):
@@ -21,8 +22,14 @@ class ncWriter(Thread):
         self.__varDefs = varDefs
         self.__queue = queue.Queue()
 
+    def join(self):
+        self.__queue.join()
+
+    def qsize(self):
+        return self.__queue.qsize()
+
     def put(self, time:datetime.datetime, record:dict) -> None:
-        if not isinstance(time, datetime.datetime):
+        if time is not None and not isinstance(time, datetime.datetime):
             logging.info("time %s %s", time, type(time))
             raise ValueError
         self.__queue.put((time, record))
@@ -41,7 +48,7 @@ class ncWriter(Thread):
         adj = []
         t = t.strftime("%Y%m%d")
         for index in range(len(qAdjustFile)):
-            if qAdjustFile[index]: 
+            if qAdjustFile[index]:
                 adj.append(filenames[index].replace("YYYYMMDD", t))
             else:
                 adj.append(filenames[index])
@@ -158,7 +165,10 @@ class ncWriter(Thread):
                 index = round((t - tRef).seconds)
                 if index < 0: continue
                 nc["time"][index] = index
-                for name in record: nc[name][index] = record[name]
+                for name in record:
+                    val = record[name]
+                    if not np.isnan(val):
+                        nc[name][index] = val
 
     def simplifyRecords(self, records:list) -> list:
         times = {}
@@ -208,9 +218,13 @@ class ncWriter(Thread):
         tRef = None
 
         seenYYYYMMDD = dict()
+        qExit = False
 
-        while True:
+        while not qExit:
             (t, record) = q.get()
+            if t is None:
+                q.task_done()
+                break
             now = time.time()
             dom = t.day if filesToAdjust else -1
             records = {dom: [(t, record)]}
@@ -220,6 +234,10 @@ class ncWriter(Thread):
                 if dt <= 0: break
                 try:
                     (t, record) = q.get(block=True, timeout=dt)
+                    q.task_done()
+                    if t is None:
+                        qExit = True
+                        break
                     dom = t.day if filesToAdjust else -1
                     if dom in records:
                         records[dom].append((t, record))
@@ -230,7 +248,7 @@ class ncWriter(Thread):
                 except:
                     logging.exception("GotMe")
                     break
-         
+
             toCopy = set()
 
             for dom in records:
@@ -258,3 +276,5 @@ class ncWriter(Thread):
                     self.copyTo(fn, os.path.join(args.copyTo, os.path.basename(fn)))
 
             q.task_done()
+
+        raise UserWarning
