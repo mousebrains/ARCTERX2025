@@ -33,7 +33,7 @@ cog:
 
 wSpd:
   type: f4
-  units: m/s
+  units: knots
   long_name: wind_speed_true
 
 wDir:
@@ -43,7 +43,7 @@ wDir:
 
 wSpdPort:
   type: f4
-  units: m/s
+  units: knots
   long_name: wind_speed_true_port
 
 wDirPort:
@@ -53,7 +53,7 @@ wDirPort:
 
 wSpdStbd:
   type: f4
-  units: m/s
+  units: knots
   long_name: wind_speed_true_stbd
 
 wDirStbd:
