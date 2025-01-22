@@ -5,6 +5,7 @@
 
 from argparse import ArgumentParser
 import numpy as np
+import pandas as pd
 from netCDF4 import Dataset
 from TPWUtils.Thread import Thread
 import logging
@@ -75,7 +76,7 @@ class ncWriter(Thread):
             case _:
                 return np.nan if a[0] == "f" else None
 
-    def initializeNC(self, fn:str):
+    def initializeNC(self, fn:str, t0:np.datetime64):
         varDefs = self.__varDefs
 
         globalOpts = dict(
@@ -128,9 +129,8 @@ class ncWriter(Thread):
                     if key not in skipKeys:
                         varId.setncattr(key, item[key])
 
-    def initializeAllNC(self, filenames:list):
-        for fn in filenames:
-            self.initializeNC(fn)
+            if "units" not in nc[timeName].ncattrs():
+                nc[timeName].setncattr("units", "seconds since " + t0.strftime("%Y-%m-%dT%H:%M:%S"))
 
     def copyTo(self, src:str, tgt:str) -> None:
         stime = time.time()
@@ -148,43 +148,32 @@ class ncWriter(Thread):
 
         logging.info("Took %s seconds to copy %s to %s", time.time()-stime, src, tgt)
 
-    def updateNetCDF(self, fn:str, records:list) -> None:
-        tRef = None
+    def updateNetCDF(self, fn:str, df:pd.DataFrame, t0:np.datetime64, colNames:list) -> None:
+        logging.info("Updating %s rows in %s", df.shape[0], fn)
+        stime = time.time()
         with Dataset(fn, "a") as nc:
             varT = nc["time"]
-            if "units" not in varT.ncattrs():
-                tRef = min(list(map(lambda a: a[0], records)))
-
-                tRef = tRef.replace(microsecond=0)
-                varT.setncattr("units", "seconds since " + tRef.strftime("%Y-%m-%dT%H:%M:%S"))
-            elif tRef is None:
+            if "units" in varT.ncattrs():
                 units = varT.units.removeprefix("seconds since ")
-                tRef = datetime.datetime.strptime(units, "%Y-%m-%dT%H:%M:%S") \
-                        .replace(tzinfo=datetime.timezone.utc)
-            for (t, record) in records:
-                index = round((t - tRef).seconds)
-                if index < 0: continue
-                nc["time"][index] = index
-                for name in record:
-                    val = record[name]
-                    if not np.isnan(val):
-                        nc[name][index] = val
-
-    def simplifyRecords(self, records:list) -> list:
-        times = {}
-        for (t, record) in records:
-            dSec = round(t.microsecond / 1000000)
-            tNew = t.replace(microsecond=0) + datetime.timedelta(seconds=dSec)
-            if tNew not in times:
-                times[tNew] = record
+                tRef = np.datetime64(units)
             else:
-                times[tNew].update(record)
+                tRef = t0
+                varT.setncattr("units", "seconds since " + tRef.strftime("%Y-%m-%dT%H:%M:%S"))
 
-        result = []
-        for t in sorted(times):
-            result.append((t, times[t]))
+            dt = (t0 - tRef).total_seconds()
 
-        return result
+            tIndex = (df.tIndex + dt).astype(int)
+            qTime = tIndex >= 0
+            varT[tIndex[qTime]] = tIndex[qTime]
+            for col in colNames:
+                val = df[col].values
+                q = np.logical_and(qTime, np.logical_not(np.isnan(val)))
+                if any(q):
+                    nc[col][tIndex[q]] = val[q]
+        logging.info("Took %s seconds to update  %s rows in %s", 
+                     round(time.time()-stime, 2),
+                     df.shape[0],
+                     fn)
 
     def runIt(self):
         args = self.args
@@ -211,13 +200,9 @@ class ncWriter(Thread):
             else:
                 filesNotToAdjust.add(fn)
 
-        if filesNotToAdjust:
-            self.initializeAllNC(filesNotToAdjust) # Initialize non-adjustable files
-
         units = None
-        tRef = None
 
-        seenYYYYMMDD = dict()
+        filesInitialized = set()
         qExit = False
 
         while not qExit:
@@ -226,8 +211,8 @@ class ncWriter(Thread):
                 q.task_done()
                 break
             now = time.time()
-            dom = t.day if filesToAdjust else -1
-            records = {dom: [(t, record)]}
+            record["time"] = np.datetime64(t.replace(tzinfo=None))
+            records = [record]
 
             while True:
                 dt = delay - (time.time() - now)
@@ -238,38 +223,43 @@ class ncWriter(Thread):
                     if t is None:
                         qExit = True
                         break
-                    dom = t.day if filesToAdjust else -1
-                    if dom in records:
-                        records[dom].append((t, record))
-                    else:
-                        records[dom] = [(t, record)]
+                    record["time"] = np.datetime64(t.replace(tzinfo=None))
+                    records.append(record)
                 except queue.Empty:
                     break
                 except:
                     logging.exception("GotMe")
                     break
 
+            df = pd.DataFrame(records)
+            df.time = df.time.dt.round(freq="s")
+            df  = df.groupby(by="time", as_index=False).agg("median")
+            df = df.sort_values("time")
+            t0 = df.time.iloc[0]
+            df["tIndex"] = (df.time - t0).astype("timedelta64[s]").astype(int)
+
+            colNames = list(filter(lambda x: x not in ["time", "tIndex"], df.columns))
             toCopy = set()
 
-            for dom in records:
-                items = self.simplifyRecords(records[dom])
-                if filesToAdjust:
-                    yyyymmdd = items[0][0].strftime("%Y%m%d")
-                    if yyyymmdd not in seenYYYYMMDD:
-                        seenYYYYMMDD[yyyymmdd] = set()
-                        for fn in filesToAdjust:
-                            fn = fn.replace("YYYYMMDD", yyyymmdd)
-                            seenYYYYMMDD[yyyymmdd].add(fn)
-                            self.initializeNC(fn)
-                    for fn in seenYYYYMMDD[yyyymmdd]:
-                        logging.info("Writing %s records to %s", len(items), fn)
-                        self.updateNetCDF(fn, items)
+            if filesToAdjust:
+                df["dayOfMonth"] = df.time.dt.floor(freq="D")
+                for (dom, rows) in df.groupby(by="dayOfMonth"):
+                    yyyymmdd = dom.strftime("%Y%m%d")
+                    for fn in filesToAdjust:
+                        fn = fn.replace("YYYYMMDD", yyyymmdd)
+                        if fn not in filesInitialized:
+                            self.initializeNC(fn, rows.time.iloc[0])
+                            filesInitialized.add(fn)
+                        self.updateNetCDF(fn, rows, t0, colNames)
                         toCopy.add(fn)
-                if filesNotToAdjust:
-                    for fn in filesNotToAdjust:
-                        logging.info("Writing %s records to %s", len(items), fn)
-                        self.updateNetCDF(fn, items)
-                        toCopy.add(fn)
+
+            for fn in filesNotToAdjust:
+                if fn not in filesInitialized:
+                    self.initializeNC(fn, t0)
+                    filesInitialized.add(fn)
+
+                self.updateNetCDF(fn, df, t0, colNames)
+                toCopy.add(fn)
 
             if args.copyTo:
                 for fn in toCopy:
