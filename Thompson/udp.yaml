@@ -5,7 +5,7 @@ global:
   
 time:
   timeName: True
-  type: u4
+  type: i4
   long_name: time
   calendar: proleptic_gregorian
 
