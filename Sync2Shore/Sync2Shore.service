@@ -15,8 +15,8 @@ WorkingDirectory=/home/pat/logs
 #
 ExecStart=/home/pat/ARCTERX2025/Sync2Shore/sync2Shore.py \
 	--logfile=/home/pat/logs/sync2Shore.log \
-	--verbose 
-	--config=/home/pat/ARCTERX2025/Sync2Shore/config.yaml
+	--config=/home/pat/ARCTERX2025/Sync2Shore/config.yaml \
+	--verbose  
         
 [Install]
 WantedBy=multi-user.target
