@@ -209,11 +209,13 @@ class ncWriter(Thread):
             (t, record) = q.get()
             if t is None:
                 q.task_done()
+                logging.warning("t is None for %s", record)
                 break
-            now = time.time()
+
             record["time"] = np.datetime64(t.replace(tzinfo=None))
             records = [record]
 
+            now = time.time()
             while True:
                 dt = delay - (time.time() - now)
                 if dt <= 0: break
@@ -221,6 +223,7 @@ class ncWriter(Thread):
                     (t, record) = q.get(block=True, timeout=dt)
                     q.task_done()
                     if t is None:
+                        logging.warning("t is None for %s", record)
                         qExit = True
                         break
                     record["time"] = np.datetime64(t.replace(tzinfo=None))
