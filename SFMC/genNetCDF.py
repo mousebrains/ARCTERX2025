@@ -29,6 +29,8 @@ class Builder(Thread):
                 starbuck="mkStarbuck",
                 catalina="mkCatalina",
                 mariner="mkMariner",
+                osu684="mkOSU684",
+                osu685="mkOSU685",
                 )
 
         while True:
