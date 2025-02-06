@@ -23,10 +23,10 @@ Description=Fetch drifter fixes
 # When the ship is not near the drifters, but the gliders are, fetch every hour
 # When the gliders are gone, fetch every 12 hours
 # dayOfWeek Year-Month-Day Hour:Minute:Second
-OnCalendar=*-*-* *:07/10:30
+# OnCalendar=*-*-* *:07/10:30
 # OnCalendar=*-*-* 00/1:07:30
 # OnCalendar=*-*-* 01/6:07:30
-# OnCalendar=*-*-* 01/12:07:30
+OnCalendar=*-*-* 01/12:07:30
 Persistent=true
 
 [Install]
