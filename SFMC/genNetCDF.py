@@ -31,6 +31,7 @@ class Builder(Thread):
                 mariner="mkMariner",
                 osu684="mkOSU684",
                 osu685="mkOSU685",
+                SFMC=None,
                 )
 
         while True:
@@ -40,8 +41,13 @@ class Builder(Thread):
             commands = set()
 
             dirname = os.path.basename(os.path.dirname(fn))
+
             if dirname not in nameMap:
                 logging.info("Unsupported %s", dirname)
+                q.task_done()
+                continue
+
+            if nameMap[dirname] is None:
                 q.task_done()
                 continue
 
