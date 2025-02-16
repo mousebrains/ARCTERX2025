@@ -78,20 +78,20 @@ class Builder(Thread):
                      logging.info("ReturnCode: %s", sp.returncode)
 
                 if sp.stdout:
-                    a = sp.stdout
-                    try:
-                        a = str(a, "utf-8")
-                    except:
-                        pass
-                    logging.info("STDOUT %s", a)
+                    for line in sp.stdout.split(b"\n"):
+                        try:
+                            line = str(line, "utf-8")
+                        except:
+                            pass
+                        logging.info("STDOUT %s", line)
 
                 if sp.stderr:
-                    a = sp.stderr
-                    try:
-                        a = str(a, "utf-8")
-                    except:
-                        pass
-                    logging.info("STDERR %s", a)
+                    for line in sp.stderr.split(b"\n"):
+                        try:
+                            line = str(line, "utf-8")
+                        except:
+                            pass
+                        logging.info("STDERR %s", line)
 
             q.task_done()
 
