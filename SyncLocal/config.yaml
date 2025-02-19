@@ -1,6 +1,12 @@
-- /home/cordc/SFMC
-- /home/cordc/wavebuoy
-- /home/cordc/waveglider
-- /home/cordc/olci
-- /home/cordc/sar
-- /home/cordc/pearl-drifters
+/home/cordc/SFMC:
+  -
+/home/cordc/wavebuoy:
+  -
+/home/cordc/waveglider:
+  - --exclude=*Kodiak*
+/home/cordc/olci:
+  -
+/home/cordc/sar:
+  -
+/home/cordc/pearl-drifters:
+  - 

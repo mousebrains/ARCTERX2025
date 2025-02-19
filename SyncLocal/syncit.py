@@ -1,8 +1,9 @@
 #! /usr/bin/env python3
 #
-# When things change in directories, copy them to ~/Sync/Shore
+# When things change in directories, copy them to the --target directory
 #
 # Nov-2024, Pat Welch, pat@mousebrains.com
+# Feb-2025, Pat Welch, pat@mousebrains.com allow extra arguments to rsync
 
 from argparse import ArgumentParser
 from TPWUtils.INotify import INotify
@@ -13,14 +14,15 @@ import subprocess
 import yaml
 import time
 
-def rsync(sources:list, args:ArgumentParser) -> bool:
+def rsync(src:str, args:ArgumentParser, extras:list=None) -> bool:
     cmd = [args.rsync,
            "--verbose",
            "--archive",
            "--exclude", "~.tmp~",
            "--temp-dir", args.cache,
            ]
-    cmd.extend(sources)
+    if extras: cmd.extend(extras)
+    cmd.append(src)
     cmd.append(args.target)
 
     sp = subprocess.run(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,)
@@ -62,13 +64,20 @@ try:
     with open(args.config, "r") as fp:
         config = yaml.safe_load(fp)
 
+    for src in config:
+        opts = []
+        for opt in config[src]:
+            if opt: opts.append(opt)
+        config[src] = opts if opts else None
+
     i = INotify(args)
     i.start()
 
     for src in config:
         i.addTree(src)
 
-    rsync(config, args)
+    for src in config:
+        rsync(src, args, None if not config[src] else config[src])
 
     q = i.queue
     while True:
@@ -85,7 +94,8 @@ try:
             sources.add(mkRootPath(fn, config))
             logging.info("Adding extra %s", fn)
 
-        rsync(sources, args)
+        for src in sources:
+            rsync(src, args, config[src])
 
 except:
     logging.exception("Unexpected exception")
